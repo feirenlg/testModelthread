@@ -25,6 +25,7 @@ void testModelThreadControl::onInit()
 void testModelThreadControl::onStart()
 {
 	m_thread->startModelThread();
+	m_stepType = TestModel_step_1;
 }
 
 void testModelThreadControl::onStop()
@@ -42,7 +43,7 @@ void testModelThreadControl::enterLoop()
 	bool loopStatus = testModelSetting::instance()->getStatus();
 	while(loopStatus) {
 		switch(m_stepType) {
-			case step_1:
+			case TestModel_step_1:
 			{
 				if (1) {
 					testModelJob1* Job1 = new testModelJob1();
@@ -51,7 +52,7 @@ void testModelThreadControl::enterLoop()
 				}
 				break;
 			}
-			case step_2:
+			case TestModel_step_2:
 			{
 				if (1) {
 					testModelJob2* Job2 = new testModelJob2();
@@ -60,7 +61,7 @@ void testModelThreadControl::enterLoop()
 				}
 				break;
 			}
-			case step_3:
+			case TestModel_step_3:
 			{
 				if (0) {
 

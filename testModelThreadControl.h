@@ -1,4 +1,5 @@
 #include "testModelThread.h"
+#include "testModelDefine.h"
 
 class testModeThreadControl
 {
@@ -15,4 +16,5 @@ public:
 
 private:
 	testModelThread *m_thread;
+	TestModelStepType m_stepType;
 };
