@@ -1,22 +1,52 @@
 #include <testModelThread.h>
 
+
+
+
+
+testModelSyncObj::testModelSyncObj()
+{
+	init();
+}
+
+testModelSyncObj::~testModelSyncObj()
+{
+	destroy();
+}
+
 testModelThread::testModelThread()
 	: m_tid(0)
 	, m_attr(0)
-	, m_bThreadEndFlag(false)
+	, m_bThreadEndFlag(true)
 	, m_bThreadQuitFlag(false)
 	, m_syncObj(NULL)
 {
-	int ret = pthread_attr_init(&m_attr);
-
-	if(0 != ret) {
-	    return;
-	}
+	
 }
 
 testModelThread::~testModelThread()
 {
 
+}
+
+void testModelThread::init()
+{
+	int ret = pthread_attr_init(&m_attr);
+	if(0 != ret) {
+	    return;
+	}
+
+	ret = pthread_mutex_init(&m_mutex, NULL);
+	if(0 != ret) {
+	    return;
+	}
+
+	pthread_condattr_init(&m_condattr);
+
+	ret = pthread_cond_init(&m_cond, &m_condattr);
+	if(0 != ret) {
+	    return;
+	}
 }
 
 void testModelThread::startModelThread()
@@ -45,61 +75,52 @@ void testModelThread::stopModelThread()
 	else {
 	    join();
 	}
-	m_bThreadQuitFlag = true;
+	setJobThreadIsQuit(true);
+	notify();
 }
 
-bool testModelThread::checkModelThreadJobEnd()
-{
-	if(false == m_bThreadEndFlag) {
-	    return false;
-	}
-	return true;
-}
 
 void testModelThread::pushModelJob2Thread(testModelJobBase *ModelJob)
 {
 	m_syncObj.syncStart();
-	m_bThreadEndFlag = false;
-	threadJobList.push_back(ModelJob);
+	if (!getJobThreadIsQuit()) {
+	    threadJobList.push_back(ModelJob);	
+	}
+	notify();
 	m_syncObj.syncEnd();
 }
 
 void * testModelThread::threadProc(void * p)
 {
-	if(threadJobList.empty()) {
-		return NULL;
+	testModelThread *thread = static_cast<testModelThread*>p;
+	thread->setJobThreadIsQuit(false);
+
+	while(!thread->getJobThreadIsQuit()){
+        wait();
+	    while(!threadJobList.empty()) {
+	        testModelJobBase *threadJob = NULL;
+	        m_syncObj.syncStart();
+	        threadJob = threadJobList.front();
+	        m_syncObj.syncEnd();
+
+	        if (NULL != threadJob) {
+	        	threadJob->JobThreadRun();
+
+	        	if (threadJob->isAutoRemove()) {
+	        		m_syncObj.syncStart();
+	        	    threadJobList.pop_front();
+	        	    m_syncObj.syncEnd();
+	        		delete threadJob;
+	        		threadJob = NULL;
+	        	}
+	        }
+
+	        if (thread->getJobThreadIsQuit()) {
+	        	break;
+	        }
+	    }
 	}
-	if(NULL == p) {
-		return NULL;
-	}
 
-	testModelJobBase *threadJob = NULL;
-	m_syncObj.syncStart();
-	threadJob = threadJobList.pop_front();
-	m_syncObj.syncEnd();
-
-	while(1) {
-
-		if(p->checkModelThreadQuit()) {
-			break;
-		}
-
-		if(threadJob != NULL) {
-			threadJob->JobThreadRun();	
-		}
-
-		if(p->checkModelThreadJobEnd()) {
-			sleep(1);
-		}
-
-		if(threadJobList.empty()) {
-			m_bThreadEndFlag = true;
-		}
-
-
-		
-
-	}
 }
 
 void testModelThread::join()
@@ -118,10 +139,26 @@ void testModelThread::join()
     }
 }
 
-bool testModelThread::checkModelThreadQuit()
+void testModelThread::wait()
 {
-	if(!m_bThreadQuitFlag) {
-		return false;
-	}
-	return true;
+    pthread_mutex_lock(&m_mutex);
+	pthread_cond_wait(&m_cond, &mutex);
+	pthread_mutex_unlock(&pthread_mutex);
+}
+
+void testModelThread::notify()
+{
+	pthread_mutex_lock(&m_mutex);
+	pthread_cond_signal(&m_cond);
+	pthread_mutex_unlock(&pthread_mutex);
+}
+
+void testModelThread::setJobThreadIsQuit(bool isQuit)
+{
+	m_bThreadQuitFlag = isQuit;
+}
+
+bool testModelThread::getJobThreadIsQuit()
+{
+	return m_bThreadQuitFlag;
 }

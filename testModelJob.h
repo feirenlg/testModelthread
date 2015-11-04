@@ -3,10 +3,17 @@
 class testModelJobBase
 {
 public:
-	testModelJobBase(){};
+	testModelJobBase();
 	virtual ~testModelJobBase(){};
+
+	bool isAutoRemove();
+	void setAutoRemove(bool isAuto);
+
 public:
 	virtual void  JobThreadRun();
+
+private:
+	bool m_isAutoRemoveFlag;
 };
 
 

@@ -36,7 +36,6 @@ private:
 
 private:
 	pthread_mutex_t mutex;
-	pthread_cond_t m_cond; 
 	pthread_mutexattr_t  m_attr;
 
 };
@@ -51,19 +50,24 @@ public:
 	void pushModelJob2Thread(testModelJobBase *ModelJob);
 	void startModelThread();
 	void stopModelThread();
-	bool checkModelThreadJobEnd();
-	bool checkModelThreadQuit();
 	void notify();
 	void join();
+	void wait();
+	void init();
 
 protected:
 	 static void * threadProc(void *p);
+	 void setJobThreadIsQuit(bool isQuit);
+	 bool getJobThreadIsQuit();
 
 private:
 	std::list<testModelJobBase *> threadJobList;
 	pthread_t m_tid;
 	pthread_attr_t  m_attr;
+	pthread_cond_t m_cond;
+	pthread_mutex_t m_mutex;
+	pthread_condattr_t m_condattr; 
 	bool  m_bThreadEndFlag;
 	bool m_bThreadQuitFlag;
 	testModelSyncObj *m_syncObj;
-}
+};
